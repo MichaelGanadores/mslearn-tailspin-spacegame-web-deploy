@@ -78,12 +78,7 @@ stages:
 - stage: 'Dev'
   displayName: 'Deploy to the dev environment'
   dependsOn: Build
-  condition: |
-    and
-    (
-      succeeded(),
-      eq(variables['Build.SourceBranchName'], variables['releaseBranchName'])
-    )
+  condition: succeededOrFailed() #Runs even if Build job fails - For testing purposes only.
   jobs:
   - deployment: Deploy
     pool:
