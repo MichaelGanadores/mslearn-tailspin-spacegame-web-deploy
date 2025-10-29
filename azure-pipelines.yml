@@ -78,7 +78,7 @@ stages:
 - stage: 'Dev'
   displayName: 'Deploy to the dev environment'
   dependsOn: Build
-  condition: succeededOrFailed() #Runs even if Build job fails - For testing purposes only.
+  condition: succeeded()
   jobs:
   - deployment: Deploy
     pool:
