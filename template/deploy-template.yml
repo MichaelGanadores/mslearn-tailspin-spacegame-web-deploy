@@ -12,7 +12,7 @@ jobs:
     environment: ${{ parameters.environmentName }}
     variables: 
     - group: Release
-    stragety: 
+    strategy: 
       runOnce: 
         deploy: 
           steps: 
