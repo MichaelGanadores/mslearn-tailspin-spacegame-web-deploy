@@ -79,7 +79,7 @@ stages:
   displayName: 'Deploy to the dev environment'
   dependsOn: Build
   jobs:
-  - template: deploy-template.yml
+  - template: template/deploy-template.yml
     parameters:
       environmentName: 'dev'
       webAppName: '$(WebAppNameDev)'
@@ -88,7 +88,7 @@ stages:
   displayName: 'Deploy to the test environment'
   dependsOn: Dev
   jobs:
-  - template: deploy-template.yml
+  - template: template/deploy-template.yml
     parameters:
       environmentName: 'test'
       webAppName: '$(WebAppNameTest)'
