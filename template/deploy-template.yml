@@ -1,0 +1,26 @@
+# deploy-template.yml
+parameters: 
+  - name: environmentName
+    type: string
+  - name: WebAppName
+    type: string
+
+jobs: 
+  - deployment: Deploy
+    pool: 
+      vmImage: 'ubuntu 22.04'
+    environment: ${{ parameters.environmentName }}
+    variables: 
+    - group: Release
+    stragety: 
+      runOnce: 
+        deploy: 
+          steps: 
+            - download: current
+              artifact: drop
+            - task: AzureWebApp@1
+              displayName: 'Azure App Service Deploy: website'
+              inputs: 
+                azureSubscription: 'Resource Manager - Tailspin - Space Game'
+                appName: '${{ parameters.WebAppName }}'
+                package: '$(Pipeline.Workspace)/drop/$(buildConfiguration)/*.zip'

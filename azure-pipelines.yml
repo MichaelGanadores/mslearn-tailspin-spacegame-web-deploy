@@ -67,41 +67,31 @@ stages:
       displayName: 'Publish the project - $(buildConfiguration)'
       inputs:
         command: 'publish'
-        projects: 'Tailspin.SpaceGame.Web/Tailspin.SpaceGame.Web.csproj'
-        publishWebProjects: true
+        projects: '**/*.csproj'
+        publishWebProjects: false
         arguments: '--no-build --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/$(buildConfiguration)'
         zipAfterPublish: true
 
     - publish: '$(Build.ArtifactStagingDirectory)'
       artifact: drop
 
-# Deploy to Dev Environment
 - stage: 'Dev'
   displayName: 'Deploy to the dev environment'
   dependsOn: Build
-  # condition: succeeded()
   jobs:
-  - deployment: Deploy
-    pool:
-      vmImage: 'ubuntu-22.04'
-    environment: dev
-    variables:
-    - group: Release
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - download: current
-            artifact: drop
-          - task: AzureWebApp@1
-            displayName: 'Azure App Service Deploy: website'
-            inputs:
-              azureSubscription: 'Resource Manager - Tailspin - Space Game'
-              appName: '$(WebAppNameDev)'
-              package: '$(Pipeline.Workspace)/drop/**/*.zip'
+  - template: deploy-template.yml
+    parameters:
+      environmentName: 'dev'
+      webAppName: '$(WebAppNameDev)'
 
-# Deploy to Test Environment
 - stage: 'Test'
+  displayName: 'Deploy to the test environment'
+  dependsOn: Dev
+  jobs:
+  - template: deploy-template.yml
+    parameters:
+      environmentName: 'test'
+      webAppName: '$(WebAppNameTest)'
   displayName: 'Deploy to the test environment'
   dependsOn: Dev
   # condition: eq(variables['Build.Reason'], 'Schedule')
