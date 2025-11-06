@@ -54,7 +54,7 @@ stages:
         tags: |
           $(tag)
       env:
-        DOCKER_BUILDKIT: '1'
+        DOCKER_BUILDKIT: '0'
 
 - stage: 'Deploy'
   displayName: 'Deploy the container'
