@@ -15,17 +15,10 @@ stages:
   - job: 'Build'
     displayName: 'Build job'
     pool:
-      name: 'VM Pool'            # self-hosted pool
-      vmImage: 'ubuntu-22.04'    # ignored by self-hosted; fine to keep
+      name: 'VM Pool'
+      vmImage: 'ubuntu-22.04'
     steps:
-    - task: DockerInstaller@0
-      displayName: 'Install Docker CLI and Buildx'
-      inputs:
-        dockerVersion: 'latest'
-        releaseType: 'stable'
-        addToPath: true
-
-    # Install Azure CLI if the VM doesn't have it yet
+    # Ensure Azure CLI is present
     - script: |
         set -e
         if ! command -v az >/dev/null 2>&1; then
@@ -37,29 +30,34 @@ stages:
         az --version
       displayName: 'Ensure Azure CLI is installed'
 
-    # Login to ACR using Managed Identity via ARM service connection
+    # (Optional) Ensure Buildx plugin is present
+    - script: |
+        set -e
+        if ! docker buildx version >/dev/null 2>&1; then
+          echo "Installing docker-buildx-plugin..."
+          sudo apt-get update -y
+          sudo apt-get install -y docker-buildx-plugin
+        fi
+        docker buildx version
+      displayName: 'Ensure Buildx is installed'
+
     - task: AzureCLI@2
       displayName: 'Login to ACR using Managed Identity'
       inputs:
-        azureSubscription: 'Resource Manager - Tailspin - Space Game' # ARM service connection configured for MI
+        azureSubscription: 'Resource Manager - Tailspin - Space Game'
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
           set -e
-          echo "Logging into ACR with Managed Identity..."
           az acr login --name tailspinspacegamemcg
-          echo "Account context:"
-          az account show --output table || true
 
-    # Build and push (reuses docker login from az acr login)
     - task: Docker@2
       displayName: 'Build and push the image to container registry'
       inputs:
         command: buildAndPush
         buildContext: $(Build.Repository.LocalPath)
-        repository: $(webRepository)  # e.g., 'web' only
+        repository: $(webRepository)
         dockerfile: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web/DockerFile'
-        # Intentionally omit containerRegistry to avoid overriding MI auth
         tags: |
           $(tag)
       env:
