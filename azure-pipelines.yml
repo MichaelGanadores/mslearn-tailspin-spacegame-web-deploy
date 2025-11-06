@@ -18,13 +18,6 @@ stages:
       name: 'VM Pool'            # self-hosted pool
       vmImage: 'ubuntu-22.04'    # ignored for self-hosted; ok to keep
     steps:
-    # (Optional but recommended) Ensure modern Docker CLI + Buildx are available
-    - task: DockerInstaller@0
-      displayName: 'Install Docker CLI and Buildx'
-      inputs:
-        dockerVersion: 'latest'
-        releaseType: 'stable'
-        addToPath: true
 
     # 1) Login to ACR with Managed Identity via Azure CLI
     # Make sure this service connection is Azure Resource Manager (ARM) and is set to use Managed Identity
