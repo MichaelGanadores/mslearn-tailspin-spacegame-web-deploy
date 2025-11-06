@@ -28,7 +28,7 @@ stages:
         containerRegistry: 'ACR New'  # your Docker Registry (ACR) service connection (Managed Identity)
         repository: $(webRepository)   # e.g., myregistry.azurecr.io/app or just app
         buildContext: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web'
-        dockerfile: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web/Dockerfile'
+        dockerfile: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web/DockerFile'
         tags: |
           $(tag)
 
