@@ -9,14 +9,14 @@ variables:
   RegistryName: 'tailspinspacegamemcg.azurecr.io'
 
 stages:
-- stage: 'Build'
-  displayName: 'Build and push'
+- stage: Build
+  displayName: Build and push
   jobs:
-  - job: 'Build'
-    displayName: 'Build job'
+  - job: Build
+    displayName: Build job
     pool:
-      name: 'VM Pool'
-      vmImage: 'ubuntu-22.04'
+      name: VM Pool                 # self-hosted pool
+      vmImage: ubuntu-22.04         # ignored for self-hosted; ok to keep
     steps:
     # Ensure Azure CLI exists (remove this step if you installed az on the VM already)
     - script: |
@@ -28,31 +28,35 @@ stages:
           echo "Azure CLI already installed."
         fi
         az --version
-      displayName: 'Ensure Azure CLI is installed'
+      displayName: Ensure Azure CLI is installed
 
-- task: AzureCLI@2
-  displayName: 'Login to ACR using Managed Identity'
-  inputs:
-    azureSubscription: 'Resource Manager - Tailspin - Space Game'
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      set -e
-      az acr login --name tailspinspacegamemcg
+    # Login to ACR using Managed Identity (ARM service connection configured for MI)
+    - task: AzureCLI@2
+      displayName: Login to ACR using Managed Identity
+      inputs:
+        azureSubscription: 'Resource Manager - Tailspin - Space Game'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -e
+          az acr login --name tailspinspacegamemcg
+          echo "Account context:"
+          az account show --output table || true
 
-- task: Docker@2
-  displayName: 'Build and push the image to container registry'
-  inputs:
-    command: buildAndPush
-    buildContext: $(Build.Repository.LocalPath)
-    # Fully qualified repo so docker push goes to ACR, not Docker Hub
-    repository: tailspinspacegamemcg.azurecr.io/$(webRepository)
-    dockerfile: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web/DockerFile'
-    tags: |
-      $(tag)
-  # If Buildx isn't installed yet, disable BuildKit to avoid errors
-  env:
-    DOCKER_BUILDKIT: '0'
+    # Build & push using local Docker (reuses the ACR login above)
+    - task: Docker@2
+      displayName: Build and push the image to container registry
+      inputs:
+        command: buildAndPush
+        buildContext: $(Build.Repository.LocalPath)
+        # Use fully qualified repo so docker push goes to ACR, not Docker Hub
+        repository: tailspinspacegamememcg.azurecr.io/$(webRepository)
+        dockerfile: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web/DockerFile'
+        tags: |
+          $(tag)
+      env:
+        # Disable BuildKit if Buildx isn't installed yet on the VM
+        DOCKER_BUILDKIT: '0'
 
 - stage: 'Deploy'
   displayName: 'Deploy the container'
