@@ -16,34 +16,50 @@ stages:
     displayName: 'Build job'
     pool:
       name: 'VM Pool'            # self-hosted pool
-      vmImage: 'ubuntu-22.04'    # ignored for self-hosted; ok to keep
+      vmImage: 'ubuntu-22.04'    # ignored by self-hosted; fine to keep
     steps:
+    - task: DockerInstaller@0
+      displayName: 'Install Docker CLI and Buildx'
+      inputs:
+        dockerVersion: 'latest'
+        releaseType: 'stable'
+        addToPath: true
 
-    # 1) Login to ACR with Managed Identity via Azure CLI
-    # Make sure this service connection is Azure Resource Manager (ARM) and is set to use Managed Identity
+    # Install Azure CLI if the VM doesn't have it yet
+    - script: |
+        set -e
+        if ! command -v az >/dev/null 2>&1; then
+          echo "Azure CLI not found. Installing..."
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+        else
+          echo "Azure CLI already installed."
+        fi
+        az --version
+      displayName: 'Ensure Azure CLI is installed'
+
+    # Login to ACR using Managed Identity via ARM service connection
     - task: AzureCLI@2
       displayName: 'Login to ACR using Managed Identity'
       inputs:
-        azureSubscription: 'Resource Manager - Tailspin - Space Game' # your ARM service connection (MI)
+        azureSubscription: 'Resource Manager - Tailspin - Space Game' # ARM service connection configured for MI
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
           set -e
           echo "Logging into ACR with Managed Identity..."
           az acr login --name tailspinspacegamemcg
-          echo "Logged in as $(az account show --query user.name -o tsv || echo managed-identity)"
+          echo "Account context:"
+          az account show --output table || true
 
-    # 2) Build and push using Docker@2 (reuses the docker login created above)
+    # Build and push (reuses docker login from az acr login)
     - task: Docker@2
       displayName: 'Build and push the image to container registry'
       inputs:
         command: buildAndPush
         buildContext: $(Build.Repository.LocalPath)
-        repository: $(webRepository)   # e.g., 'web' (do NOT prefix with registry here)
+        repository: $(webRepository)  # e.g., 'web' only
         dockerfile: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web/DockerFile'
-        # When using az acr login above, this containerRegistry input is optional.
-        # If you keep it, ensure it doesn't override auth with a non-MI connection.
-        # containerRegistry: 'ACR New'
+        # Intentionally omit containerRegistry to avoid overriding MI auth
         tags: |
           $(tag)
       env:
