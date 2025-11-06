@@ -4,26 +4,33 @@ trigger:
 variables:
   buildConfiguration: 'Release'
   webRepository: 'web'
+  imageName: 'devopsusecase3'
   tag: '$(Build.BuildId)'
+  RegistryName: 'tailspinspacegamemcg.azurecr.io'
 
 stages:
-- stage: 'Build'
+- stage: Build
   displayName: 'Build and push'
-  jobs:  
-  - job: 'Build'
+  jobs:
+  - job: Build
     displayName: 'Build job'
     pool:
-      name: 'VM Pool'
-      vmImage: 'ubuntu-22.04'
+      name: 'VM Pool'           # self-hosted pool; do not set vmImage here
+    demands:
+    - docker                    # ensure this agent actually has Docker
     steps:
+    - task: DockerInstaller@0
+      inputs:
+        dockerVersion: '27.0.2'
+
     - task: Docker@2
       displayName: 'Build and push the image to container registry'
       inputs:
         command: buildAndPush
-        buildContext: $(Build.Repository.LocalPath)
-        repository: $(webRepository)
-        dockerfile: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web/DockerFile'
-        containerRegistry: 'ACR New'
+        containerRegistry: 'ACR New'  # your Docker Registry (ACR) service connection (Managed Identity)
+        repository: $(webRepository)   # e.g., myregistry.azurecr.io/app or just app
+        buildContext: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web'
+        dockerfile: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web/Dockerfile'
         tags: |
           $(tag)
 
