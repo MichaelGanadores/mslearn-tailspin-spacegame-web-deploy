@@ -50,7 +50,7 @@ stages:
         command: buildAndPush
         buildContext: $(Build.Repository.LocalPath)
         # Use fully qualified repo so docker push goes to ACR, not Docker Hub
-        repository: tailspinspacegamememcg.azurecr.io/$(webRepository)
+        repository: tailspinspacegamemcg.azurecr.io/$(webRepository)
         dockerfile: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web/DockerFile'
         tags: |
           $(tag)
