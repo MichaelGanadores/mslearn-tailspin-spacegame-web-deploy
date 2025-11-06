@@ -15,9 +15,7 @@ stages:
   - job: Build
     displayName: 'Build job'
     pool:
-      name: 'VM Pool'           # self-hosted pool; do not set vmImage here
-    demands:
-    - docker                    # ensure this agent actually has Docker
+      name: 'VM Pool' 
     steps:
     - task: DockerInstaller@0
       inputs:
