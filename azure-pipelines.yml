@@ -13,6 +13,7 @@ stages:
   - job: 'Build'
     displayName: 'Build job'
     pool:
+      name: 'VM Pool'
       vmImage: 'ubuntu-22.04'
     steps:
     - task: Docker@2
