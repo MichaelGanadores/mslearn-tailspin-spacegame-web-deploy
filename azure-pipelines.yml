@@ -11,23 +11,50 @@ variables:
 stages:
 - stage: 'Build'
   displayName: 'Build and push'
-  jobs:  
+  jobs:
   - job: 'Build'
     displayName: 'Build job'
     pool:
-      name: 'VM Pool'
-      vmImage: 'ubuntu-22.04'
+      name: 'VM Pool'            # self-hosted pool
+      vmImage: 'ubuntu-22.04'    # ignored for self-hosted; ok to keep
     steps:
+    # (Optional but recommended) Ensure modern Docker CLI + Buildx are available
+    - task: DockerInstaller@0
+      displayName: 'Install Docker CLI and Buildx'
+      inputs:
+        dockerVersion: 'latest'
+        releaseType: 'stable'
+        addToPath: true
+
+    # 1) Login to ACR with Managed Identity via Azure CLI
+    # Make sure this service connection is Azure Resource Manager (ARM) and is set to use Managed Identity
+    - task: AzureCLI@2
+      displayName: 'Login to ACR using Managed Identity'
+      inputs:
+        azureSubscription: 'Resource Manager - Tailspin - Space Game' # your ARM service connection (MI)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -e
+          echo "Logging into ACR with Managed Identity..."
+          az acr login --name tailspinspacegamemcg
+          echo "Logged in as $(az account show --query user.name -o tsv || echo managed-identity)"
+
+    # 2) Build and push using Docker@2 (reuses the docker login created above)
     - task: Docker@2
       displayName: 'Build and push the image to container registry'
       inputs:
         command: buildAndPush
         buildContext: $(Build.Repository.LocalPath)
-        repository: $(webRepository)
+        repository: $(webRepository)   # e.g., 'web' (do NOT prefix with registry here)
         dockerfile: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web/DockerFile'
-        containerRegistry: 'ACR New'
+        # When using az acr login above, this containerRegistry input is optional.
+        # If you keep it, ensure it doesn't override auth with a non-MI connection.
+        # containerRegistry: 'ACR New'
         tags: |
           $(tag)
+      env:
+        DOCKER_BUILDKIT: '1'
 
 - stage: 'Deploy'
   displayName: 'Deploy the container'
