@@ -18,7 +18,7 @@ stages:
       name: 'VM Pool'
       vmImage: 'ubuntu-22.04'
     steps:
-    # Ensure Azure CLI is present
+    # Ensure Azure CLI exists (remove this step if you installed az on the VM already)
     - script: |
         set -e
         if ! command -v az >/dev/null 2>&1; then
@@ -30,17 +30,7 @@ stages:
         az --version
       displayName: 'Ensure Azure CLI is installed'
 
-    # (Optional) Ensure Buildx plugin is present
-    - script: |
-        set -e
-        if ! docker buildx version >/dev/null 2>&1; then
-          echo "Installing docker-buildx-plugin..."
-          sudo apt-get update -y
-          sudo apt-get install -y docker-buildx-plugin
-        fi
-        docker buildx version
-      displayName: 'Ensure Buildx is installed'
-
+    # Login to ACR with Managed Identity
     - task: AzureCLI@2
       displayName: 'Login to ACR using Managed Identity'
       inputs:
@@ -50,13 +40,16 @@ stages:
         inlineScript: |
           set -e
           az acr login --name tailspinspacegamemcg
+          echo "Account context:"
+          az account show --output table || true
 
+    # Build & push using local Docker (reuses login)
     - task: Docker@2
       displayName: 'Build and push the image to container registry'
       inputs:
         command: buildAndPush
         buildContext: $(Build.Repository.LocalPath)
-        repository: $(webRepository)
+        repository: $(webRepository)   # e.g. 'web' only
         dockerfile: '$(Build.SourcesDirectory)/Tailspin.SpaceGame.Web/DockerFile'
         tags: |
           $(tag)
